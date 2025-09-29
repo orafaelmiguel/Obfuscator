@@ -23,8 +23,6 @@ impl From<anyhow::Error> for AuthError {
     }
 }
 
-/// Performs a blocking HTTP POST to /auth/login
-/// Returns LoginResponse on success or AuthError on failure.
 pub fn login_request(base_url: &str, email: &str, password: &str) -> Result<LoginResponse, AuthError> {
     let client = Client::builder()
         .timeout(Duration::from_secs(15))

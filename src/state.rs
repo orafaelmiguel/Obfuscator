@@ -32,6 +32,7 @@ pub struct ObscuraState {
     pub token: Option<String>,
     pub auth_processing: bool,
     pub auth_rx: Option<Receiver<AuthMsg>>,
+    pub last_auth_error: Option<String>,
 }
 
 impl ObscuraState {
@@ -50,6 +51,7 @@ impl ObscuraState {
             token: None,
             auth_processing: false,
             auth_rx: None,
+            last_auth_error: None,
         }
     }
 
@@ -66,7 +68,6 @@ impl ObscuraState {
         }
     }
 
-    /// Polls messages from the pipeline receiver and updates state/logs accordingly.
     pub fn poll_pipeline_messages(&mut self) {
         if let Some(rx) = self.pipeline_rx.take() {
             for msg in rx.try_iter() {
@@ -94,25 +95,28 @@ impl ObscuraState {
     }
 
     pub fn poll_auth_messages(&mut self) {
-        if let Some(rx) = self.auth_rx.take() {
-            for msg in rx.try_iter() {
-                match msg {
-                    AuthMsg::Success(tok) => {
-                        self.push_log("Authentication successful");
-                        self.token = Some(tok);
-                        self.state = AppState::Dashboard;
-                        self.auth_processing = false;
-                    }
-                    AuthMsg::Error(e) => {
-                        self.push_log(format!("Authentication failed: {}", e));
-                        self.auth_processing = false;
-                    }
+    if let Some(rx) = self.auth_rx.take() {
+        for msg in rx.try_iter() {
+            match msg {
+                AuthMsg::Success(tok) => {
+                    self.push_log("Authentication successful");
+                    self.token = Some(tok);
+                    self.state = AppState::Dashboard;
+                    self.auth_processing = false;
+                    self.last_auth_error = None; 
+                }
+                AuthMsg::Error(e) => {
+                    self.push_log(format!("Authentication failed: {}", e));
+                    self.auth_processing = false;
+                    self.last_auth_error = Some(e); 
                 }
             }
+        }
 
-            if self.auth_processing {
-                self.auth_rx = Some(rx);
-            }
+        if self.auth_processing {
+            self.auth_rx = Some(rx);
         }
     }
+}
+
 }
