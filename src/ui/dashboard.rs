@@ -1,6 +1,6 @@
 use eframe::egui;
 use eframe::egui::ScrollArea;
-use crate::app::Obscura;
+use crate::app::{Obscura};
 
 pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
     ui.horizontal(|ui| {
@@ -15,6 +15,7 @@ pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
 
     ui.separator();
 
+    // main controls
     ui.horizontal(|ui| {
         if ui.button("Carregar arquivo EXE").clicked() {
             app.push_log("Botão 'Carregar arquivo EXE' clicado (fake)");
@@ -39,17 +40,24 @@ pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
 
         ui.add_space(16.0);
 
-        if ui.add_enabled(app.selected_file.is_some(), egui::Button::new("Proteger")).clicked() {
-            app.push_log("Pipeline 'Proteger' iniciado (mock)");
-            if app.encrypt_strings {
-                app.push_log(" - Encrypt strings selecionado");
-            }
-            if app.obfuscate_functions {
-                app.push_log(" - Obfuscate functions selecionado");
-            }
-            app.push_log("Pipeline concluído (mock)");
+        // button who starts the pipeline
+        if ui.add_enabled(!app.processing, egui::Button::new("Proteger")).clicked() {
+            app.start_pipeline_mock();
+        }
+
+        // spinner
+        if app.processing {
+            ui.add_space(8.0);
+            ui.label(format!("Progresso: {}%", (app.progress * 100.0) as u32));
         }
     });
+
+    ui.separator();
+
+    // show progress bar
+    if app.processing {
+        ui.add(egui::ProgressBar::new(app.progress).show_percentage());
+    }
 
     ui.separator();
 
@@ -62,7 +70,6 @@ pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
     ui.label("Logs:");
     ui.add_space(4.0);
 
-    // Logs section
     ui.horizontal(|ui| {
         if ui.button("Limpar logs").clicked() {
             app.logs.clear();
@@ -74,7 +81,6 @@ pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
 
     ui.add_space(6.0);
 
-    // Mostrar logs com scroll
     ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
         for entry in app.logs.iter().rev() {
             ui.label(entry);
