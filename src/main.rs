@@ -3,6 +3,7 @@ mod state;
 mod pipeline;
 mod ui;
 mod auth;
+mod auth_client;
 
 use app::Obscura;
 use eframe::egui;

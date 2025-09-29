@@ -2,9 +2,15 @@ use std::sync::mpsc::Receiver;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::pipeline::PipelineMsg;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AppState {
     Login,
     Dashboard,
+}
+
+pub enum AuthMsg {
+    Success(String /* token */),
+    Error(String /* message */),
 }
 
 pub struct ObscuraState {
@@ -12,7 +18,6 @@ pub struct ObscuraState {
     pub email: String,
     pub password: String,
 
-    pub counter: i32,
     pub logs: Vec<String>,
 
     pub selected_file: Option<String>,
@@ -22,6 +27,11 @@ pub struct ObscuraState {
     pub processing: bool,
     pub progress: f32,
     pub pipeline_rx: Option<Receiver<PipelineMsg>>,
+
+    // Authentication
+    pub token: Option<String>,
+    pub auth_processing: bool,
+    pub auth_rx: Option<Receiver<AuthMsg>>,
 }
 
 impl ObscuraState {
@@ -30,7 +40,6 @@ impl ObscuraState {
             state: AppState::Login,
             email: String::new(),
             password: String::new(),
-            counter: 0,
             logs: Vec::new(),
             selected_file: None,
             encrypt_strings: true,
@@ -38,6 +47,9 @@ impl ObscuraState {
             processing: false,
             progress: 0.0,
             pipeline_rx: None,
+            token: None,
+            auth_processing: false,
+            auth_rx: None,
         }
     }
 
@@ -77,6 +89,29 @@ impl ObscuraState {
 
             if self.processing {
                 self.pipeline_rx = Some(rx);
+            }
+        }
+    }
+
+    pub fn poll_auth_messages(&mut self) {
+        if let Some(rx) = self.auth_rx.take() {
+            for msg in rx.try_iter() {
+                match msg {
+                    AuthMsg::Success(tok) => {
+                        self.push_log("Authentication successful");
+                        self.token = Some(tok);
+                        self.state = AppState::Dashboard;
+                        self.auth_processing = false;
+                    }
+                    AuthMsg::Error(e) => {
+                        self.push_log(format!("Authentication failed: {}", e));
+                        self.auth_processing = false;
+                    }
+                }
+            }
+
+            if self.auth_processing {
+                self.auth_rx = Some(rx);
             }
         }
     }
