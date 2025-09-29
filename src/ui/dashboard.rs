@@ -1,89 +1,81 @@
 use eframe::egui;
 use eframe::egui::ScrollArea;
-use crate::app::{Obscura};
+use crate::state::{ObscuraState, AppState};
+use crate::pipeline::start_pipeline_mock;
+use crate::auth;
 
-pub fn show_dashboard(ui: &mut egui::Ui, app: &mut Obscura) {
+pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
+    // Poll pipeline messages each frame
+    state.poll_pipeline_messages();
+
     ui.horizontal(|ui| {
         ui.heading("Dashboard");
         ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-            if ui.button("Sair").clicked() {
-                app.state = crate::app::AppState::Login;
-                app.push_log("Usuário fez logout");
+            if ui.button("Logout").clicked() {
+                auth::logout(state);
             }
         });
     });
 
     ui.separator();
 
-    // main controls
     ui.horizontal(|ui| {
-        if ui.button("Carregar arquivo EXE").clicked() {
-            app.push_log("Botão 'Carregar arquivo EXE' clicado (fake)");
+        if ui.button("Load EXE file").clicked() {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("Executable", &["exe"])
+                .pick_file()
+            {
+                let path_str = path.display().to_string();
+                state.selected_file = Some(path_str.clone());
+                state.push_log(format!("Selected file: {}", path_str));
+            } else {
+                state.push_log("File selection cancelled");
+            }
         }
 
-        if let Some(path) = &app.selected_file {
-            ui.label(format!("Arquivo: {}", path));
+        if let Some(path) = &state.selected_file {
+            ui.label(format!("File: {}", path));
         } else {
-            ui.label("Arquivo: nenhum selecionado");
+            ui.label("File: none selected");
+        }
+    });
+
+    ui.separator();
+
+    ui.horizontal(|ui| {
+        if ui.add_enabled(
+            state.selected_file.is_some() && !state.processing,
+            egui::Button::new("Protect"),
+        ).clicked() {
+            if let Some(path) = &state.selected_file {
+                let rx = start_pipeline_mock(path.clone().into());
+                state.pipeline_rx = Some(rx);
+                state.processing = true;
+                state.progress = 0.0;
+                state.push_log("Pipeline started (mock)");
+            }
         }
 
-        ui.add_space(16.0);
+        if state.processing {
+            ui.add(egui::ProgressBar::new(state.progress).show_percentage());
+        }
+    });
 
-        ui.vertical(|ui| {
-            ui.label("Opções:");
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut app.encrypt_strings, "Encrypt strings");
-                ui.add_space(6.0);
-                ui.checkbox(&mut app.obfuscate_functions, "Obfuscate functions");
-            });
+    ui.separator();
+
+    ui.collapsing("Logs", |ui| {
+        ui.horizontal(|ui| {
+            if ui.button("Clear logs").clicked() {
+                state.logs.clear();
+                state.push_log("Logs cleared");
+            }
+            ui.label(format!("Entries: {}", state.logs.len()));
         });
 
-        ui.add_space(16.0);
-
-        // button who starts the pipeline
-        if ui.add_enabled(!app.processing, egui::Button::new("Proteger")).clicked() {
-            app.start_pipeline_mock();
-        }
-
-        // spinner
-        if app.processing {
-            ui.add_space(8.0);
-            ui.label(format!("Progresso: {}%", (app.progress * 100.0) as u32));
-        }
-    });
-
-    ui.separator();
-
-    // show progress bar
-    if app.processing {
-        ui.add(egui::ProgressBar::new(app.progress).show_percentage());
-    }
-
-    ui.separator();
-
-    ui.collapsing("Placeholder - Configurações avançadas", |ui| {
-        ui.label("Aqui aparecerão controles avançados (control flow, anti-debug, etc.)");
-    });
-
-    ui.separator();
-
-    ui.label("Logs:");
-    ui.add_space(4.0);
-
-    ui.horizontal(|ui| {
-        if ui.button("Limpar logs").clicked() {
-            app.logs.clear();
-            app.push_log("Logs limpos pelo usuário");
-        }
-        ui.add_space(8.0);
-        ui.label(format!("Entradas: {}", app.logs.len()));
-    });
-
-    ui.add_space(6.0);
-
-    ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
-        for entry in app.logs.iter().rev() {
-            ui.label(entry);
-        }
+        ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
+            for entry in state.logs.iter().rev() {
+                ui.label(entry);
+            }
+        });
     });
 }

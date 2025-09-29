@@ -1,5 +1,8 @@
 mod app;
+mod state;
+mod pipeline;
 mod ui;
+mod auth;
 
 use app::Obscura;
 use eframe::egui;
@@ -13,7 +16,7 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "Obscura",
+        "Obscura Defender",
         native_options,
         Box::new(|cc| Ok(Box::new(Obscura::new(cc)))),
     )
