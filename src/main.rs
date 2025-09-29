@@ -1,36 +1,10 @@
+mod app;
+mod ui;
+
+use app::Obscura;
 use eframe::egui;
 
-struct Obscura {
-    counter: i32,
-}
-
-impl Obscura {
-    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        Self { counter: 0 }
-    }
-}
-
-impl eframe::App for Obscura {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Obscura");
-            ui.horizontal(|ui| {
-                if ui.button("−").clicked() {
-                    self.counter -= 1;
-                }
-                ui.label(self.counter.to_string());
-                if ui.button("+").clicked() {
-                    self.counter += 1;
-                }
-            });
-            ui.separator();
-            ui.label("Hi");
-        });
-    }
-}
-
-
-fn main() {
+fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 720.0])
@@ -42,6 +16,5 @@ fn main() {
         "Obscura",
         native_options,
         Box::new(|cc| Ok(Box::new(Obscura::new(cc)))),
-    ).unwrap();
+    )
 }
-
