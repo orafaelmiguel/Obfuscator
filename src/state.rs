@@ -1,6 +1,6 @@
 use std::sync::mpsc::Receiver;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::pipeline::PipelineMsg;
+use crate::pipeline::PipelineMessage;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AppState {
@@ -26,7 +26,7 @@ pub struct ObscuraState {
 
     pub processing: bool,
     pub progress: f32,
-    pub pipeline_rx: Option<Receiver<PipelineMsg>>,
+    pub pipeline_rx: Option<Receiver<PipelineMessage>>,
 
     // Authentication
     pub token: Option<String>,
@@ -72,16 +72,16 @@ impl ObscuraState {
         if let Some(rx) = self.pipeline_rx.take() {
             for msg in rx.try_iter() {
                 match msg {
-                    PipelineMsg::Log(s) => self.push_log(s),
-                    PipelineMsg::Progress(p) => {
+                    PipelineMessage::Log(s) => self.push_log(s),
+                    PipelineMessage::Progress(p) => {
                         self.progress = p.clamp(0.0, 1.0);
                     }
-                    PipelineMsg::Done(output_path) => {
-                        self.push_log(format!("Pipeline finished. Output: {}", output_path.display()));
+                    PipelineMessage::Done(output_path) => {
+                        self.push_log(format!("Pipeline finished. Output: {}", output_path));
                         self.processing = false;
                         self.progress = 1.0;
                     }
-                    PipelineMsg::Error(e) => {
+                    PipelineMessage::Error(e) => {
                         self.push_log(format!("Pipeline error: {}", e));
                         self.processing = false;
                     }

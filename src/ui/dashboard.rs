@@ -1,81 +1,106 @@
 use eframe::egui;
-use eframe::egui::ScrollArea;
-use crate::state::{ObscuraState, AppState};
-use crate::pipeline::start_pipeline_mock;
-use crate::auth;
+use crate::state::ObscuraState;
+use crate::pipeline::{self};
 
 pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
-    // Poll pipeline messages each frame
-    state.poll_pipeline_messages();
+    ui.with_layout(egui::Layout::top_down(eframe::egui::Align::Center), |ui| {
+        ui.add_space(20.0);
 
-    ui.horizontal(|ui| {
-        ui.heading("Dashboard");
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-            if ui.button("Logout").clicked() {
-                auth::logout(state);
-            }
-        });
-    });
+        ui.heading(
+            egui::RichText::new("Dashboard")
+                .size(28.0)
+                .strong(),
+        );
 
-    ui.separator();
+        ui.add_space(30.0);
 
-    ui.horizontal(|ui| {
-        if ui.button("Load EXE file").clicked() {
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter("Executable", &["exe"])
-                .pick_file()
-            {
-                let path_str = path.display().to_string();
-                state.selected_file = Some(path_str.clone());
-                state.push_log(format!("Selected file: {}", path_str));
-            } else {
-                state.push_log("File selection cancelled");
-            }
-        }
+        // --- File Section ---
+        egui::Frame::default()
+            .corner_radius(12)
+            .stroke(egui::Stroke::NONE)
+            .show(ui, |ui| {
+                ui.set_width(600.0);
+                ui.vertical(|ui| {
+                    ui.heading("📂 File");
+                    ui.add_space(10.0);
 
-        if let Some(path) = &state.selected_file {
-            ui.label(format!("File: {}", path));
-        } else {
-            ui.label("File: none selected");
-        }
-    });
+                    if ui.button("Load EXE file").clicked() {
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Executable", &["exe"])
+                            .pick_file()
+                        {
+                            let path_str = path.display().to_string();
+                            state.selected_file = Some(path_str.clone());
+                            state.push_log(format!("Loaded file: {}", path_str));
+                        }
+                    }
 
-    ui.separator();
+                    ui.add_space(8.0);
 
-    ui.horizontal(|ui| {
-        if ui.add_enabled(
-            state.selected_file.is_some() && !state.processing,
-            egui::Button::new("Protect"),
-        ).clicked() {
-            if let Some(path) = &state.selected_file {
-                let rx = start_pipeline_mock(path.clone().into());
-                state.pipeline_rx = Some(rx);
-                state.processing = true;
-                state.progress = 0.0;
-                state.push_log("Pipeline started (mock)");
-            }
-        }
+                    if let Some(path) = &state.selected_file {
+                        ui.label(
+                            egui::RichText::new(format!("Selected: {}", path))
+                                .color(ui.visuals().hyperlink_color),
+                        );
+                    } else {
+                        ui.label(egui::RichText::new("No file selected").italics());
+                    }
+                });
+            });
 
-        if state.processing {
-            ui.add(egui::ProgressBar::new(state.progress).show_percentage());
-        }
-    });
+        ui.add_space(20.0);
 
-    ui.separator();
+        // --- Log Section ---
+        egui::Frame::default()
+            .corner_radius(12)
+            .stroke(egui::Stroke::NONE)
+            .show(ui, |ui| {
+                ui.set_width(600.0);
+                ui.vertical(|ui| {
+                    ui.heading("📝 Logs");
+                    ui.add_space(10.0);
 
-    ui.collapsing("Logs", |ui| {
-        ui.horizontal(|ui| {
-            if ui.button("Clear logs").clicked() {
-                state.logs.clear();
-                state.push_log("Logs cleared");
-            }
-            ui.label(format!("Entries: {}", state.logs.len()));
-        });
+                    egui::ScrollArea::vertical()
+                        .max_height(200.0)
+                        .stick_to_bottom(true)
+                        .show(ui, |ui| {
+                            for log in &state.logs {
+                                ui.label(log);
+                            }
+                        });
+                });
+            });
 
-        ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
-            for entry in state.logs.iter().rev() {
-                ui.label(entry);
-            }
-        });
+        ui.add_space(20.0);
+
+        // --- Actions Section ---
+        egui::Frame::default()
+            .corner_radius(12)
+            .stroke(egui::Stroke::NONE)
+            .show(ui, |ui| {
+                ui.set_width(600.0);
+                ui.vertical_centered(|ui| {
+                    ui.heading("⚡ Actions");
+                    ui.add_space(10.0);
+
+                    if state.processing {
+                        ui.add_enabled(
+                            false,
+                            egui::Button::new("Processing...")
+                                .min_size([200.0, 40.0].into()),
+                        );
+                    } else if ui
+                        .add_sized([200.0, 40.0], egui::Button::new("Protect File"))
+                        .clicked()
+                    {
+                        if let Some(path) = state.selected_file.clone() {
+                            state.push_log(format!("Starting pipeline for {}", path));
+                            pipeline::start_fake_pipeline(state, path);
+                        } else {
+                            state.push_log("No file selected. Cannot run pipeline.");
+                        }
+                    }
+                });
+            });
     });
 }

@@ -1,62 +1,37 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::PathBuf,
-    sync::mpsc::{self, Receiver, Sender},
-    thread,
-    time::Duration,
-};
+use crate::state::{ObscuraState};
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
-#[derive(Debug)]
-pub enum PipelineMsg {
+#[derive(Debug, Clone)]
+pub enum PipelineMessage {
     Log(String),
     Progress(f32),
-    Done(PathBuf),
+    Done(String),   // output file path
     Error(String),
 }
 
-/// Starts a mock pipeline in a background thread.
-/// Returns an `mpsc::Receiver` to listen for pipeline messages.
-pub fn start_pipeline_mock(input_path: PathBuf) -> Receiver<PipelineMsg> {
-    let (tx, rx): (Sender<PipelineMsg>, Receiver<PipelineMsg>) = mpsc::channel();
+/// Fake pipeline that simulates parsing, encrypting and writing an output file
+pub fn start_fake_pipeline(state: &mut ObscuraState, file_path: String) {
+    let (tx, rx) = mpsc::channel();
+    state.pipeline_rx = Some(rx);
+    state.processing = true;
+
+    let path_clone = file_path.clone();
+    state.push_log(format!("Parsing file {} ...", path_clone));
 
     thread::spawn(move || {
-        let steps = vec![
-            "Parsing file...",
-            "Encrypting strings...",
-            "Obfuscating functions...",
-            "Rebuilding binary...",
-        ];
+        let _ = tx.send(PipelineMessage::Log("Parsing file...".into()));
+        thread::sleep(Duration::from_secs(1));
 
-        for (i, step) in steps.iter().enumerate() {
-            if tx.send(PipelineMsg::Log(step.to_string())).is_err() {
-                return;
-            }
+        let _ = tx.send(PipelineMessage::Log("Encrypting strings...".into()));
+        thread::sleep(Duration::from_secs(1));
 
-            let progress = (i + 1) as f32 / steps.len() as f32;
-            if tx.send(PipelineMsg::Progress(progress)).is_err() {
-                return;
-            }
+        let _ = tx.send(PipelineMessage::Log("Done!".into()));
 
-            thread::sleep(Duration::from_secs(1));
-        }
+        let output = format!("{}.obscura-log", path_clone);
+        std::fs::write(&output, "Pipeline completed").ok();
 
-        // Fake output file
-        let out_path = input_path.with_extension("obscura-log");
-        match File::create(&out_path) {
-            Ok(mut f) => {
-                let _ = writeln!(f, "Pipeline finished successfully (mock)");
-                let _ = tx.send(PipelineMsg::Log("Output file written".into()));
-                let _ = tx.send(PipelineMsg::Done(out_path));
-            }
-            Err(e) => {
-                let _ = tx.send(PipelineMsg::Error(format!(
-                    "Failed to write output: {}",
-                    e
-                )));
-            }
-        }
+        let _ = tx.send(PipelineMessage::Done(output));
     });
-
-    rx
 }
