@@ -21,12 +21,13 @@ pub enum PipelineMessage {
     Error(String),
 }
 
+/// Context passed to steps
 #[derive(Clone, Debug)]
 pub struct PipelineContext {
     pub input_path: String,
     pub encrypt_strings: bool,
     pub obfuscate_functions: bool,
-    // future fields: output_dir, token, callback hooks, etc.
+    // Futuro: output_dir, auth_token, config avançada etc.
 }
 
 impl PipelineContext {
@@ -44,7 +45,7 @@ impl PipelineContext {
 pub fn start_pipeline(ctx: PipelineContext) -> mpsc::Receiver<PipelineMessage> {
     let (tx, rx) = mpsc::channel::<PipelineMessage>();
 
-    // Prepare the ordered steps
+    // Define ordem das etapas dinamicamente
     let mut steps: Vec<Box<dyn PipelineStep + Send>> = Vec::new();
     steps.push(Box::new(ParseStep::new()));
     if ctx.encrypt_strings {
@@ -55,27 +56,26 @@ pub fn start_pipeline(ctx: PipelineContext) -> mpsc::Receiver<PipelineMessage> {
     }
     steps.push(Box::new(WriteOutputStep::new()));
 
-    // Spawn background thread that runs steps sequentially
     thread::spawn(move || {
-        // send initial log
-        let _ = tx.send(PipelineMessage::Log(format!("Pipeline started for '{}'", ctx.input_path)));
+        let _ = tx.send(PipelineMessage::Log(format!(
+            "Pipeline started for '{}'",
+            ctx.input_path
+        )));
         let total = steps.len() as f32;
 
         for (i, step) in steps.into_iter().enumerate() {
-            // progress base (0.0 .. 1.0)
             let base = i as f32 / total;
             let step_share = 1.0 / total;
 
-            // run step (each step should send logs / progress)
+            // Executa o passo (cada passo envia seus próprios logs e progresso)
             step.run(&ctx, &tx);
 
-            // after step complete, send progress marker near end of its share
+            // Marca progresso após passo concluído
             let _ = tx.send(PipelineMessage::Progress((base + step_share * 0.95).min(1.0)));
         }
 
-        // build a fake output path (for PoC)
+        // Gera saída mock
         let output = format!("{}.obscura-protected", ctx.input_path);
-        // write a placeholder file (safe best-effort)
         let _ = std::fs::write(&output, "Obscura Defender - mock protected file");
 
         let _ = tx.send(PipelineMessage::Log(format!("Pipeline finished, output: {}", &output)));

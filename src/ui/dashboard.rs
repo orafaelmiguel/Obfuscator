@@ -1,6 +1,6 @@
 use eframe::egui;
 use crate::state::ObscuraState;
-use crate::pipeline::{self};
+use crate::pipeline::{self, PipelineContext};
 
 pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
     ui.with_layout(egui::Layout::top_down(eframe::egui::Align::Center), |ui| {
@@ -95,7 +95,19 @@ pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
                     {
                         if let Some(path) = state.selected_file.clone() {
                             state.push_log(format!("Starting pipeline for {}", path));
-                            pipeline::start_fake_pipeline(state, path);
+
+                            // criar contexto do pipeline
+                            let ctx = PipelineContext::new(
+                                path,
+                                state.encrypt_strings,
+                                state.obfuscate_functions,
+                            );
+
+                            // iniciar pipeline modular
+                            let rx = pipeline::start_pipeline(ctx);
+                            state.pipeline_rx = Some(rx);
+                            state.processing = true;
+                            state.progress = 0.0;
                         } else {
                             state.push_log("No file selected. Cannot run pipeline.");
                         }
