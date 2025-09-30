@@ -118,12 +118,13 @@ pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
                     }
 
                     // Footer
-                    ui.label(
-                        egui::RichText::new("Forgot password?")
+                    ui.hyperlink_to(
+                        egui::RichText::new("Forgot Password")
                             .color(ui.visuals().hyperlink_color)
                             .underline()
                             .size(16.0),
-                    );
+                        "https://obscurasec.io/forgot-password"
+                    )
                 });
             });
     });
