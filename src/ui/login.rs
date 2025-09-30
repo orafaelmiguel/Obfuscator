@@ -5,25 +5,23 @@ use std::sync::mpsc;
 
 pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
     ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::TopDown), |ui| {
-        let card_width = 540.0; // mais largo
+        let card_width = 540.0; 
         let input_height = 30.0;
         let button_height = 30.0;
 
         egui::Frame::default()
-            .corner_radius(16) // cantos mais suaves
+            .corner_radius(16) 
             .stroke(egui::Stroke::NONE)
             .show(ui, |ui| {
                 ui.set_width(card_width);
 
                 ui.vertical_centered(|ui| {
-                    // Título principal
                     ui.heading(
                         egui::RichText::new("Obscura Defender")
                             .size(36.0)
                             .strong(),
                     );
 
-                    // Subtítulo
                     ui.label(
                         egui::RichText::new("Secure your applications with ease")
                             .color(ui.visuals().weak_text_color())
@@ -33,7 +31,6 @@ pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
 
                     ui.add_space(40.0);
 
-                    // Campo Email
                     ui.label(
                         egui::RichText::new("Email").size(18.0).color(ui.visuals().text_color()),
                     );
@@ -46,7 +43,6 @@ pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
 
                     ui.add_space(20.0);
 
-                    // Campo Password
                     ui.label(
                         egui::RichText::new("Password").size(18.0).color(ui.visuals().text_color()),
                     );
@@ -60,7 +56,6 @@ pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
 
                     ui.add_space(30.0);
 
-                    // Botão de Login
                     if state.auth_processing {
                         ui.add_enabled(
                             false,
@@ -108,7 +103,6 @@ pub fn show_login(ui: &mut egui::Ui, state: &mut ObscuraState) {
 
                     ui.add_space(20.0);
 
-                    // Mensagem de erro
                     if let Some(err) = &state.last_auth_error {
                         ui.colored_label(
                             egui::Color32::from_rgb(220, 60, 60),
