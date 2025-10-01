@@ -80,7 +80,7 @@ impl PipelineStep for ObfuscateFunctionsStep {
         for (i, old) in function_names.iter().enumerate() {
             // verificar cancelamento
             if ctx.cancel_flag.load(Ordering::Relaxed) {
-                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                let _ = tx.send(PipelineMessage::Cancelled);
                 return Ok(());
             }
             let new = format!("f_{:04}", i + 1);

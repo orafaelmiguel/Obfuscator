@@ -93,6 +93,12 @@ impl ObscuraState {
                         self.processing = false;
                         self.cancel_flag = None;
                     }
+                    PipelineMessage::Cancelled => {
+                        self.push_log("Pipeline cancelled by user");
+                        self.processing = false;
+                        self.progress = 0.0;
+                        self.cancel_flag = None;
+                    }
                 }
             }
 

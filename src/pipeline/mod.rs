@@ -20,6 +20,7 @@ pub enum PipelineMessage {
     Progress(f32),
     Done(String),   // output file path
     Error(String),
+    Cancelled,      // pipeline was cancelled by user
 }
 
 pub struct PipelineContext {

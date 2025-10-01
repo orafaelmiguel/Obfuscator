@@ -10,7 +10,7 @@ impl PipelineStep for WriteOutputStep {
     fn run(&self, ctx: &mut PipelineContext, tx: &Sender<PipelineMessage>) -> anyhow::Result<()> {
         // verificar cancelamento
         if ctx.cancel_flag.load(Ordering::Relaxed) {
-            let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+            let _ = tx.send(PipelineMessage::Cancelled);
             return Ok(());
         }
 

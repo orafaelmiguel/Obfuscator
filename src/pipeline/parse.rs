@@ -27,7 +27,7 @@ impl PipelineStep for ParseStep {
         for i in 0..slices {
             // verificar cancelamento
             if ctx.cancel_flag.load(Ordering::Relaxed) {
-                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                let _ = tx.send(PipelineMessage::Cancelled);
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(120));

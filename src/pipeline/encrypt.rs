@@ -77,7 +77,7 @@ impl PipelineStep for EncryptStringsStep {
         for (ri, (start, len)) in candidate_ranges.iter().cloned().enumerate() {
             // verificar cancelamento
             if ctx.cancel_flag.load(Ordering::Relaxed) {
-                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                let _ = tx.send(PipelineMessage::Cancelled);
                 return Ok(());
             }
             let slice = &bytes[start..start + len];
@@ -117,7 +117,7 @@ impl PipelineStep for EncryptStringsStep {
             for (idx, (off, len)) in found_strings.iter().enumerate() {
                 // verificar cancelamento
                 if ctx.cancel_flag.load(Ordering::Relaxed) {
-                    let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                    let _ = tx.send(PipelineMessage::Cancelled);
                     return Ok(());
                 }
                 let end = (*off).saturating_add(*len).min(out_bytes.len());
