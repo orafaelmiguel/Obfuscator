@@ -83,14 +83,21 @@ pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
                     ui.heading("⚡ Actions");
                     ui.add_space(10.0);
 
+                    // progress bar durante processamento
                     if state.processing {
-                        ui.add_enabled(
-                            false,
-                            egui::Button::new("Processing...")
-                                .min_size([200.0, 40.0].into()),
+                        ui.label("Processing pipeline...");
+                        ui.add_space(5.0);
+                        ui.add(
+                            egui::ProgressBar::new(state.progress)
+                                .show_percentage()
                         );
-                    } else if ui
-                        .add_sized([200.0, 40.0], egui::Button::new("Protect File"))
+                        ui.add_space(10.0);
+                    }
+
+                    // botão protect file (desabilitado durante processamento)
+                    let protect_enabled = !state.processing;
+                    if ui
+                        .add_enabled(protect_enabled, egui::Button::new("Protect File").min_size([200.0, 40.0].into()))
                         .clicked()
                     {
                         if let Some(path) = state.selected_file.clone() {
@@ -102,6 +109,30 @@ pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
                             state.progress = 0.0;
                         } else {
                             state.push_log("No file selected. Cannot run pipeline.");
+                        }
+                    }
+
+                    ui.add_space(15.0);
+
+                    // mostrar last output se disponível
+                    if let Some(output_path) = &state.last_output {
+                        ui.separator();
+                        ui.add_space(10.0);
+                        ui.label(
+                            egui::RichText::new(format!("Last output: {}", output_path))
+                                .color(ui.visuals().hyperlink_color)
+                        );
+                        ui.add_space(5.0);
+                        
+                        // botão para abrir pasta do output
+                        if ui.button("📁 Open output folder").clicked() {
+                            if let Some(parent) = std::path::Path::new(output_path).parent() {
+                                if let Err(e) = open::that(parent) {
+                                    state.push_log(format!("Failed to open folder: {}", e));
+                                } else {
+                                    state.push_log(format!("Opened folder: {}", parent.display()));
+                                }
+                            }
                         }
                     }
                 });
