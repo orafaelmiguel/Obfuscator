@@ -27,6 +27,7 @@ pub struct ObscuraState {
     pub processing: bool,
     pub progress: f32,
     pub pipeline_rx: Option<Receiver<PipelineMessage>>,
+    pub last_output: Option<String>,
 
     // Authentication
     pub token: Option<String>,
@@ -48,6 +49,7 @@ impl ObscuraState {
             processing: false,
             progress: 0.0,
             pipeline_rx: None,
+            last_output: None,
             token: None,
             auth_processing: false,
             auth_rx: None,
@@ -78,6 +80,7 @@ impl ObscuraState {
                     }
                     PipelineMessage::Done(output_path) => {
                         self.push_log(format!("Pipeline finished. Output: {}", output_path));
+                        self.last_output = Some(output_path.clone());
                         self.processing = false;
                         self.progress = 1.0;
                     }
