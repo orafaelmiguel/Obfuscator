@@ -1,5 +1,6 @@
 use std::fs;
 use std::sync::mpsc::Sender;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use crate::pipeline::{PipelineContext, PipelineMessage};
@@ -77,6 +78,11 @@ impl PipelineStep for ObfuscateFunctionsStep {
         let total = function_names.len();
         let mut mapping_lines: Vec<String> = Vec::with_capacity(total);
         for (i, old) in function_names.iter().enumerate() {
+            // verificar cancelamento
+            if ctx.cancel_flag.load(Ordering::Relaxed) {
+                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                return Ok(());
+            }
             let new = format!("f_{:04}", i + 1);
             mapping_lines.push(format!("{} => {}", old, new));
 

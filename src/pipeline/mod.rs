@@ -1,5 +1,5 @@
 use crate::state::ObscuraState;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, atomic::AtomicBool};
 use std::thread;
 
 mod step;
@@ -24,11 +24,12 @@ pub enum PipelineMessage {
 
 pub struct PipelineContext {
     pub input_path: String,
+    pub cancel_flag: Arc<AtomicBool>,
 }
 
 impl PipelineContext {
-    pub fn new(input_path: String) -> Self {
-        Self { input_path }
+    pub fn new(input_path: String, cancel_flag: Arc<AtomicBool>) -> Self {
+        Self { input_path, cancel_flag }
     }
 }
 
@@ -39,10 +40,14 @@ pub fn start_pipeline(state: &mut ObscuraState, file_path: String) {
     state.processing = true;
     state.progress = 0.0;
 
+    // criar cancel_flag e armazenar no state
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    state.cancel_flag = Some(cancel_flag.clone());
+
     let path_clone = file_path.clone();
 
     thread::spawn(move || {
-        let mut ctx = PipelineContext::new(path_clone);
+        let mut ctx = PipelineContext::new(path_clone, cancel_flag);
 
         // define steps sequence
         let steps: Vec<Box<dyn PipelineStep>> = vec![

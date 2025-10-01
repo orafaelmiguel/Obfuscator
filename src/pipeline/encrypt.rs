@@ -1,5 +1,6 @@
 use std::fs;
 use std::sync::mpsc::Sender;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use crate::pipeline::{PipelineContext, PipelineMessage};
@@ -74,6 +75,11 @@ impl PipelineStep for EncryptStringsStep {
         let mut found_strings: Vec<(usize, usize)> = Vec::new();
         let mut total_checked = 0usize;
         for (ri, (start, len)) in candidate_ranges.iter().cloned().enumerate() {
+            // verificar cancelamento
+            if ctx.cancel_flag.load(Ordering::Relaxed) {
+                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                return Ok(());
+            }
             let slice = &bytes[start..start + len];
             let mut i = 0usize;
             while i < slice.len() {
@@ -109,6 +115,11 @@ impl PipelineStep for EncryptStringsStep {
         if count > 0 {
             let mut out_bytes = bytes.clone();
             for (idx, (off, len)) in found_strings.iter().enumerate() {
+                // verificar cancelamento
+                if ctx.cancel_flag.load(Ordering::Relaxed) {
+                    let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                    return Ok(());
+                }
                 let end = (*off).saturating_add(*len).min(out_bytes.len());
                 for b in out_bytes[*off..end].iter_mut() {
                     *b ^= XOR_KEY;

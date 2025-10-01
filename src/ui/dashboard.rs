@@ -91,6 +91,16 @@ pub fn show_dashboard(ui: &mut egui::Ui, state: &mut ObscuraState) {
                             egui::ProgressBar::new(state.progress)
                                 .show_percentage()
                         );
+                        ui.add_space(8.0);
+                        
+                        // botão cancel
+                        if ui.button("❌ Cancel").clicked() {
+                            if let Some(flag) = &state.cancel_flag {
+                                flag.store(true, std::sync::atomic::Ordering::Relaxed);
+                                state.push_log("Cancellation requested...");
+                            }
+                        }
+                        
                         ui.add_space(10.0);
                     }
 

@@ -1,4 +1,5 @@
 use std::sync::mpsc::Receiver;
+use std::sync::{Arc, atomic::AtomicBool};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::pipeline::PipelineMessage;
 
@@ -28,6 +29,7 @@ pub struct ObscuraState {
     pub progress: f32,
     pub pipeline_rx: Option<Receiver<PipelineMessage>>,
     pub last_output: Option<String>,
+    pub cancel_flag: Option<Arc<AtomicBool>>,
 
     // Authentication
     pub token: Option<String>,
@@ -50,6 +52,7 @@ impl ObscuraState {
             progress: 0.0,
             pipeline_rx: None,
             last_output: None,
+            cancel_flag: None,
             token: None,
             auth_processing: false,
             auth_rx: None,
@@ -83,10 +86,12 @@ impl ObscuraState {
                         self.last_output = Some(output_path.clone());
                         self.processing = false;
                         self.progress = 1.0;
+                        self.cancel_flag = None;
                     }
                     PipelineMessage::Error(e) => {
                         self.push_log(format!("Pipeline error: {}", e));
                         self.processing = false;
+                        self.cancel_flag = None;
                     }
                 }
             }

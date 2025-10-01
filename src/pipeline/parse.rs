@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::sync::mpsc::Sender;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use crate::pipeline::{PipelineContext, PipelineMessage};
@@ -24,6 +25,11 @@ impl PipelineStep for ParseStep {
         // simulated progress
         let slices = 3;
         for i in 0..slices {
+            // verificar cancelamento
+            if ctx.cancel_flag.load(Ordering::Relaxed) {
+                let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+                return Ok(());
+            }
             std::thread::sleep(Duration::from_millis(120));
             let progress = (i as f32 + 1.0) / (slices as f32) * 0.10;
             tx.send(PipelineMessage::Progress(progress)).ok();

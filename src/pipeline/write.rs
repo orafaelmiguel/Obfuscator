@@ -2,11 +2,18 @@ use super::{PipelineContext, PipelineMessage, step::PipelineStep};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
+use std::sync::atomic::Ordering;
 
 pub struct WriteOutputStep;
 
 impl PipelineStep for WriteOutputStep {
     fn run(&self, ctx: &mut PipelineContext, tx: &Sender<PipelineMessage>) -> anyhow::Result<()> {
+        // verificar cancelamento
+        if ctx.cancel_flag.load(Ordering::Relaxed) {
+            let _ = tx.send(PipelineMessage::Log("Pipeline cancelled".into()));
+            return Ok(());
+        }
+
         tx.send(PipelineMessage::Log("Writing output file...".into())).ok();
 
         let input_path = PathBuf::from(&ctx.input_path);
