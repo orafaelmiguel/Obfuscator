@@ -1,8 +1,6 @@
 use std::sync::mpsc::Sender;
-use crate::pipeline::{PipelineContext, PipelineMessage};
+use crate::pipeline::PipelineMessage;
 
-/// Trait that each pipeline step implements.
-pub trait PipelineStep {
-    /// Execute the step. Should send `PipelineMessage` items through `tx`.
-    fn run(&self, ctx: &PipelineContext, tx: &Sender<PipelineMessage>);
+pub trait PipelineStep: Send {
+    fn run(&self, ctx: &mut super::PipelineContext, tx: &Sender<PipelineMessage>) -> anyhow::Result<()>;
 }

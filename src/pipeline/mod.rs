@@ -8,7 +8,7 @@ pub mod encrypt;
 pub mod obfuscate;
 pub mod write;
 
-use step::{PipelineStep, PipelineContext};
+use step::PipelineStep;
 use parse::ParseStep;
 use encrypt::EncryptStringsStep;
 use obfuscate::ObfuscateFunctionsStep;
@@ -20,6 +20,16 @@ pub enum PipelineMessage {
     Progress(f32),
     Done(String),   // output file path
     Error(String),
+}
+
+pub struct PipelineContext {
+    pub input_path: String,
+}
+
+impl PipelineContext {
+    pub fn new(input_path: String) -> Self {
+        Self { input_path }
+    }
 }
 
 /// Runs the full pipeline (Parse → Encrypt → Obfuscate → WriteOutput).
